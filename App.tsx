@@ -27,12 +27,12 @@ export default function App() {
       useNativeDriver: false,
       easing: Easing.linear,
     })
-  ).start();
+  ).start()
 
   const rotateInterpolate = rotationAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'], 
-  });
+  })
 
   useEffect(() => {
     if (result) {
@@ -66,13 +66,13 @@ export default function App() {
         setResult('')
         resetAnimation()
       }, 400)
-    });
-  };
+    })
+  }
 
   const sevondInterpolatedColor = backgroundColorAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['rgba(0, 0, 0, 0.1)', '#2e2e2e'],
-  });
+  })
 
   const fadeIn = () => {
     Animated.timing(backgroundColorAnim, {
@@ -87,7 +87,7 @@ export default function App() {
       toValue: 0,
       duration: 300,
       useNativeDriver: false,
-    }).start();
+    }).start()
   }
 
   const resetAnimation = () => {
@@ -114,61 +114,87 @@ export default function App() {
   }
 
   const handlePress = (value: string) => {
-    setInput((prev) => {
-      if (value === '=' && result) {
-        setHistory((prevHistory) => [{ input: prev, result }, ...prevHistory])
-      } else if (value === '=' && !result) {
+    let updatedInput = input
+
+    if (value === '=') {
+      if (result) {
+        setHistory((prevHistory) => [{ input: updatedInput, result }, ...prevHistory])
+      } else {
         if (Platform.OS === 'android') {
           ToastAndroid.show('Недопустимый формат, увы', ToastAndroid.SHORT)
         }
-        return prev
-      } else if (value === 'С') {
-        setResult('')
-        return ''
-      } else if (value === 'del') {
-        prev = prev.slice(0, -1)
-      } else {
-        const lastChar = prev.slice(-1)
-        if ('+-*/%*^'.includes(value) && '+-*/%^'.includes(lastChar)) {
-          return prev
-        }
-        if (value === '^') {
-          value = '**'
-        }
-        const updatedInput = prev + value
-        const numbers = updatedInput.split(/[-+*/%^]+/)
+      }
+      return
+    }
 
-        if (numbers.some((num) => num.length > 12)) {
-          if (Platform.OS === 'android') {
-            ToastAndroid.show('Максимум 12 цифр в каждом числе!', ToastAndroid.SHORT)
+    if (value === 'С') {
+      setResult('')
+      setInput('')
+      return
+    }
+
+    if (value === 'del') {
+      updatedInput = updatedInput.slice(0, -1)
+    } else {
+      const lastChar = updatedInput.slice(-1)
+
+      if ('+-*/%*^'.includes(value) && '+-*/%^'.includes(lastChar)) {
+        return
+      }
+
+      if (value === '^') {
+        value = '**'
+      }
+
+      updatedInput += value
+
+      const numbers: string[] = []
+      let currentNumber = '';
+
+      [...updatedInput].forEach((char) => {
+        if ('+-*/%^'.includes(char)) {
+          if (currentNumber) {
+            numbers.push(currentNumber)
+            currentNumber = ''
           }
-          return prev
+        } else {
+          currentNumber += char
         }
-        prev += value
+      })
+
+      if (currentNumber) {
+        numbers.push(currentNumber)
       }
 
-      if (!/[-+*/%^]/.test(prev)) {
-        setResult('')
-        return prev
-      }
-
-      if (value !== '=') {
-        try {
-          let evalResult = eval(prev)
-          if (typeof evalResult === 'number') {
-            const formattedResult =
-              evalResult.toString().length > 12
-                ? evalResult.toExponential(6)
-                : evalResult.toString()
-            setResult(formattedResult)
-          }
-        } catch (error) {
-          setResult('')
+      if (numbers.some((num) => num.length > 12)) {
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Максимум 12 цифр в каждом числе!', ToastAndroid.SHORT)
         }
+        return
       }
-      return prev
-    })
+    }
+
+    setInput(updatedInput)
+    calculateResult(updatedInput, value)
   }
+
+  const calculateResult = (input: string, value: string) => {
+    if (!/[-+*/%^]/.test(input) || value === '=') {
+      return
+    }
+
+    try {
+      let evalResult = eval(input)
+      if (typeof evalResult === 'number') {
+        const formattedResult =
+          evalResult.toString().length > 12 ? evalResult.toExponential(6) : evalResult.toString()
+        setResult(formattedResult)
+      }
+    } catch (error) {
+      setResult('')
+    }
+  }
+
 
   const interpolatedColor = colorAnim.interpolate({
     inputRange: [0, 1],
